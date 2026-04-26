@@ -1,0 +1,3 @@
+# Optional: LSTM training/inference. Install: pip install -r requirements-ml.txt
+# After: python train_lstm.py  →  models/cycle_lstm.keras
+tensorflow==2.18.0

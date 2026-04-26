@@ -1,0 +1,12 @@
+{
+  "name": "elite-her",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently -k -n api,web -c blue,magenta \"npm run start:api\" \"npm run start:web\"",
+    "start:api": "cd backend && python run_dev.py",
+    "start:web": "cd frontend && npm run dev"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
