@@ -1,8 +1,8 @@
-# 🌸 SheWins - Smart Women's Health Platform
+# SheWins - Smart Women's Health Platform
 
 AI-powered menstrual health tracking with PCOD risk detection, stress analysis, and gamification.
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Backend Setup
 ```bash
