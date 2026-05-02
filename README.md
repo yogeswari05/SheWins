@@ -1,8 +1,8 @@
-# 🌸 SheWins - Smart Women's Health Platform
+# SheWins - Smart Women's Health Platform
 
 AI-powered menstrual health tracking with PCOD risk detection, stress analysis, and gamification.
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Backend Setup
 ```bash
@@ -26,38 +26,38 @@ npm run dev
 Backend runs at `http://127.0.0.1:8000`
 Frontend runs at `http://127.0.0.1:5173`
 
-## 🔑 Production Setup
+## Production Setup
 
 ## ✨ Features
 
 ### Core Health Tracking
-- 📅 Smart cycle tracking with date validation alerts
-- 🩺 Custom symptom management (150+ symptoms)
-- 😊 Enhanced mood tracking with emojis
-- 🧘 AI-powered stress analysis
-- 🤖 Free AI health chatbot
-- 📊 Advanced LSTM-based cycle predictions
-- ⚠️ PCOD risk detection and insights
+- Smart cycle tracking with date validation alerts
+- Custom symptom management (150+ symptoms)
+- Enhanced mood tracking with emojis
+- AI-powered stress analysis
+- Free AI health chatbot
+- Advanced LSTM-based cycle predictions
+- PCOD risk detection and insights
 
 ### Advanced Features
-- 🎮 Gamification (wellness score, achievements, leaderboard)
-- 👥 Anonymous community insights and comparisons
-- 📱 Doctor-friendly PDF reports
-- 🔔 Smart reminders and notifications
-- 🌍 Multi-language support
+- Gamification (wellness score)
+- Anonymous community insights and comparisons
+- Doctor-friendly PDF reports
+- Smart reminders and notifications
+- Multi-language support
 
 ### Production Features
-- 🔐 Secure authentication (JWT)
-- 🛡️ Data encryption (AES-256)
-- 🗄️ Firebase persistent database
-- 🚀 Production-ready deployment
+- Secure authentication (JWT)
+- Data encryption (AES-256)
+- Firebase persistent database
+- Production-ready deployment
 
-## 🧠 Train LSTM model
+## Train LSTM model
 ```bash
 python train_lstm.py
 ```
 
-## 📁 Project Structure
+## Project Structure
 
 ```text
 SheWins/
@@ -82,12 +82,6 @@ SheWins/
 - **LSTM Predictions**: Advanced cycle pattern analysis
 - **Stress Analysis**: Multi-factor stress scoring
 - **Health Insights**: Personalized recommendations
-
-## 🎯 Demo Accounts
-
-- **demo@SheWins.com** (password: demo123456) - Complete feature showcase
-- **sarah@SheWins.com** (password: demo123456) - Regular wellness tracking
-- **maya@SheWins.com** (password: demo123456) - PCOD risk demonstration
 
 ### Advanced Features
 - **Ensemble Prediction System:** 6 algorithms combined with intelligent voting
