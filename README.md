@@ -83,19 +83,6 @@ SheWins/
 - **Random Forest PCOD Classifier**: Analyzes historical cycle variance, missed periods, and physical symptoms to classify PCOD risk probabilistically using a trained `scikit-learn` Random Forest model.
 - **Stress Analysis**: Multi-factor stress scoring
 
-## 💰 Production Costs
-
-- **Firebase**: $0-20/month (generous free tier)
-- **AI Chatbot**: $0 (completely free APIs)
-- **Hosting**: $5-20/month
-- **Total**: ~$5-35/month for 1,000 users
-
-## 🎯 Demo Accounts
-
-- **demo@SheWins.com** (password: demo123456) - Complete feature showcase
-- **sarah@SheWins.com** (password: demo123456) - Regular wellness tracking
-- **maya@SheWins.com** (password: demo123456) - PCOD risk demonstration
-
 ## 📈 Accuracy Achievements
 
 ### Supervised ML & Deep Learning Performance ✅
