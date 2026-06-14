@@ -1,36 +1,38 @@
 """
-PCOD/PCOS risk heuristics and weighted 0-100 score from cycle + symptom data.
+PCOD/PCOS risk detection using a trained Random Forest model.
 Non-diagnostic: educational / early-warning use only.
 """
 from __future__ import annotations
 
 import statistics
+import pickle
+from pathlib import Path
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from typing import Any, Dict, List, Optional, Tuple
+import numpy as np
 
-HIGH_GAP_DAYS = 35
-CYCLE_VARIANCE_HIGH = 15
-MEDIUM_PROLONGED_BLEED = 7
+_model = None
 
+def _model_path() -> Path:
+    base = Path(__file__).resolve().parent.parent.parent
+    return base / "models" / "pcod_rf_model.pkl"
 
-@dataclass
-class CycleEvent:
-    start: date
-    end: Optional[date] = None
-    flow: str = "medium"  # light|medium|heavy
-    symptoms: List[str] = field(default_factory=list)
-    mood: str = ""
-    sleep_hours: Optional[float] = None
-    stress: Optional[int] = None
-    exercise: Optional[str] = None
-
+def _load_model():
+    global _model
+    if _model is not None:
+        return _model
+    p = _model_path()
+    if not p.exists():
+        return None
+    with open(p, "rb") as f:
+        _model = pickle.load(f)
+    return _model
 
 def _parse_date(s: str) -> date:
     if isinstance(s, date) and not isinstance(s, datetime):
         return s
     return date.fromisoformat(str(s)[:10])
-
 
 def cycle_lengths(cycles: List[Dict[str, Any]]) -> List[int]:
     if len(cycles) < 2:
@@ -38,94 +40,31 @@ def cycle_lengths(cycles: List[Dict[str, Any]]) -> List[int]:
     starts = sorted(_parse_date(c["start_date"]) for c in cycles)
     return [(starts[i] - starts[i - 1]).days for i in range(1, len(starts))]
 
+def extract_features(cycles: List[Dict[str, Any]]) -> List[float]:
+    lengths = cycle_lengths(cycles)
+    cycle_variance = float(np.var(lengths)) if len(lengths) >= 2 else 5.0
+    max_gap = float(np.max(lengths)) if len(lengths) >= 1 else 30.0
 
-def high_risk_flags(cycles: List[Dict[str, Any]], lengths: List[int]) -> Tuple[int, List[str]]:
-    points = 0
-    notes: List[str] = []
-    if not lengths and len(cycles) < 1:
-        return 0, notes
+    acne_severity = 0
+    weight_gain_score = 0
+    hairfall_score = 0
+    fatigue_score = 0
 
-    # Gaps > 35 days
-    for L in lengths:
-        if L > HIGH_GAP_DAYS:
-            points += 25
-            notes.append("gap_over_35_days")
-            break
-
-    # Skipping 2+ cycles (gaps that imply missed periods — very long gap vs median)
-    if lengths:
-        med = statistics.median(lengths)
-        long_skips = sum(1 for L in lengths if L > med + 30 or L > 60)
-        if long_skips >= 2:
-            points += 30
-            notes.append("multiple_skipped_or_missed")
-
-    # Variance > 15 days
-    if len(lengths) >= 3:
-        var = statistics.pstdev(lengths)
-        if var > CYCLE_VARIANCE_HIGH:
-            points += 20
-            notes.append("high_cycle_variance")
-
-    return min(points, 70), list(dict.fromkeys(notes))
-
-
-def medium_risk_flags(
-    cycles: List[Dict[str, Any]], lengths: List[int]
-) -> Tuple[int, List[str]]:
-    points = 0
-    notes: List[str] = []
+    # Aggregate symptoms
     sym_lower = " ".join(" ".join(c.get("symptoms") or []) for c in cycles).lower()
-    has_acne = "acne" in sym_lower
-    has_weight = "weight" in sym_lower or "weight gain" in sym_lower
-    has_hair = "hair" in sym_lower or "hairfall" in sym_lower or "hirsutism" in sym_lower
-    if has_acne and has_weight and has_hair:
-        points += 20
-        notes.append("acne_weight_hair")
+    
+    if "acne" in sym_lower: acne_severity = 5
+    if "weight" in sym_lower or "weight gain" in sym_lower: weight_gain_score = 5
+    if "hair" in sym_lower or "hairfall" in sym_lower or "hirsutism" in sym_lower: hairfall_score = 5
+    if "fatigue" in sym_lower: fatigue_score = 5
 
-    for c in cycles:
-        s = _parse_date(c["start_date"])
-        e = c.get("end_date")
-        if e:
-            e_d = _parse_date(e)
-            if (e_d - s).days + 1 > MEDIUM_PROLONGED_BLEED:
-                points += 15
-                notes.append("prolonged_bleeding")
-                break
-
-    for L in lengths:
-        if 35 > L > 0 and L == max(lengths) and L >= 32:
-            points += 10
-            notes.append("consistently_long_cycle")
-
-    return min(points, 45), list(dict.fromkeys(notes))
-
-
-def low_risk_flags(cycles: List[Dict[str, Any]]) -> Tuple[int, List[str]]:
-    points = 0
-    notes: List[str] = []
-    blob = " ".join(
-        " ".join(c.get("symptoms") or []) + " " + (c.get("mood") or "")
-        for c in cycles
-    ).lower()
-    for kw, w in [
-        ("mood", 5),
-        ("mood swing", 8),
-        ("fatigue", 8),
-        ("spot", 6),
-    ]:
-        if kw in blob:
-            points += w
-            notes.append(f"low_signal_{kw.replace(' ', '_')}")
-    return min(points, 25), list(dict.fromkeys(notes))[:5]
-
+    return [cycle_variance, max_gap, acne_severity, weight_gain_score, hairfall_score, fatigue_score]
 
 def compute_pcod_risk(
     cycles: List[Dict[str, Any]], symptoms_summary: Optional[Dict[str, int]] = None
 ) -> Dict[str, Any]:
     """
-    Weighted 0-100 risk score. Updated conceptually 'after each cycle' by
-    recomputing on full history.
+    ML-based risk score.
     """
     if not cycles:
         return {
@@ -136,12 +75,19 @@ def compute_pcod_risk(
         }
 
     lengths = cycle_lengths(cycles)
-    h_pts, h_notes = high_risk_flags(cycles, lengths)
-    m_pts, m_notes = medium_risk_flags(cycles, lengths)
-    l_pts, l_notes = low_risk_flags(cycles)
+    model = _load_model()
+    
+    if model is None:
+        return {
+            "risk_score": 0,
+            "level": "unknown",
+            "factors": [],
+            "recommendation": "PCOD model not available.",
+        }
 
-    raw = h_pts * 0.5 + m_pts * 0.35 + l_pts * 0.15
-    score = int(max(0, min(100, round(raw * 1.2))))
+    features = extract_features(cycles)
+    prob = model.predict_proba([features])[0][1] # Probability of class 1 (PCOD)
+    score = int(prob * 100)
 
     if score >= 60:
         level = "high"
@@ -153,38 +99,18 @@ def compute_pcod_risk(
         level = "low"
         rec = "Based on current logs, no strong PCOS pattern is detected. Continue tracking and see a doctor for any new or worsening symptoms."
 
+    # Identify contributing factors naively based on thresholds
     factors: List[Dict[str, str]] = []
-    for n in h_notes:
-        factors.append(
-            {
-                "tier": "high",
-                "code": n,
-                "label": n.replace("_", " ").title(),
-            }
-        )
-    for n in m_notes:
-        factors.append(
-            {
-                "tier": "medium",
-                "code": n,
-                "label": n.replace("_", " ").title(),
-            }
-        )
-    for n in l_notes:
-        factors.append(
-            {
-                "tier": "low",
-                "code": n,
-                "label": n.replace("_", " ").title(),
-            }
-        )
+    if features[0] > 15: factors.append({"tier": "high", "code": "high_cycle_variance", "label": "High Cycle Variance"})
+    if features[1] > 35: factors.append({"tier": "high", "code": "long_cycle_gaps", "label": "Long Cycle Gaps"})
+    if features[2] > 0: factors.append({"tier": "medium", "code": "acne", "label": "Acne"})
+    if features[3] > 0: factors.append({"tier": "medium", "code": "weight_gain", "label": "Weight Gain"})
+    if features[4] > 0: factors.append({"tier": "medium", "code": "hairfall", "label": "Hairfall/Hirsutism"})
 
     return {
         "risk_score": score,
         "level": level,
         "factors": factors,
         "recommendation": rec,
-        "irregularity_index": round(
-            statistics.pstdev(lengths) if len(lengths) >= 2 else 0, 1
-        ),
+        "irregularity_index": round(features[0] ** 0.5 if len(lengths) >= 2 else 0, 1),
     }

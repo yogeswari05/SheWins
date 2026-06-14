@@ -1,4 +1,3 @@
-.env
-firebase-credentials.json
+
 backend/.env
 backend/firebase-credentials.json
